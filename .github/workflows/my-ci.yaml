@@ -100,3 +100,56 @@ jobs:
           name: docker-image
           path: nodejs-demoapp.tar
           retention-days: 1
+
+
+# =========================
+  # 3. PUBLISH STAGE
+  # =========================
+
+  publish:
+    name: Publish Image to Docker Hub
+
+    # Publish requires BOTH test and build
+    needs:
+      - test
+      - build
+
+    runs-on: ubuntu-latest
+
+    # Never publish Docker images from pull requests
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+
+    steps:
+
+      - name: Download Docker Image Artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: docker-image
+
+      - name: Load Docker Image
+        run: |
+          docker load -i nodejs-demoapp.tar
+
+      - name: Login to Docker Hub
+        uses: docker/login-action@v3
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+
+      - name: Tag Docker Image
+        run: |
+          docker tag \
+            nodejs-demoapp:${{ github.sha }} \
+            ${{ secrets.DOCKERHUB_USERNAME }}/nodejs-demoapp:${{ github.sha }}
+
+          docker tag \
+            nodejs-demoapp:${{ github.sha }} \
+            ${{ secrets.DOCKERHUB_USERNAME }}/nodejs-demoapp:latest
+
+      - name: Push Docker Image
+        run: |
+          docker push \
+            ${{ secrets.DOCKERHUB_USERNAME }}/nodejs-demoapp:${{ github.sha }}
+
+          docker push \
+            ${{ secrets.DOCKERHUB_USERNAME }}/nodejs-demoapp:latest
