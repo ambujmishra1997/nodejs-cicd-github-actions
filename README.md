@@ -40,9 +40,9 @@ GitHub Repository
    v
 GitHub Actions
    |
-   +----------------------+
-   |                      |
-   v                      |
+   +-----------------------+
+   |                       |
+   v                       |
 TEST                       |
 - Checkout code            |
 - Setup Node.js            |
@@ -51,25 +51,25 @@ TEST                       |
 - Start application        |
 - Readiness check          |
 - Integration tests        |
-   |                      |
-   | PASS                 |
-   v                      |
+   |                       |
+   | PASS                  |
+   v                       |
 BUILD                      |
 - Checkout code            |
 - docker build             |
 - docker save              |
 - Upload image artifact    |
-   |                      |
-   | PASS                 |
-   v                      |
+   |                       |
+   | PASS                  |
+   v                       | 
 PUBLISH                    |
 - Download artifact        |
 - docker load              |
 - Docker Hub login         |
 - Tag image                |
 - Push image               |
-   |                      |
-   v                      |
+   |                       |
+   v                       |
 Docker Hub <---------------+
 ```
 
