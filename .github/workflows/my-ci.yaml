@@ -65,4 +65,38 @@ jobs:
         run: npm test
 
 
- 
+  # =========================
+  # 2. BUILD STAGE
+  # =========================
+
+  build:
+    name: Build Docker Image
+
+    # Build will only run if test passes
+    needs: test
+
+    runs-on: ubuntu-latest
+
+    steps:
+
+      - name: Checkout Source Code
+        uses: actions/checkout@v6
+
+      - name: Build Docker Image
+        run: |
+          docker build \
+            -t nodejs-demoapp:${{ github.sha }} \
+            .
+
+      - name: Save Docker Image
+        run: |
+          docker save \
+            nodejs-demoapp:${{ github.sha }} \
+            -o nodejs-demoapp.tar
+
+      - name: Upload Docker Image Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: docker-image
+          path: nodejs-demoapp.tar
+          retention-days: 1
