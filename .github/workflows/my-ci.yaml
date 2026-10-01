@@ -1,0 +1,68 @@
+name: Node.js CI/CD Pipeline
+
+on:
+  push:
+    branches:
+      - main
+
+  pull_request:
+    branches:
+      - main
+
+  workflow_dispatch:    
+
+jobs:
+
+  # ==========================
+  # 1. TEST STAGE
+  # ==========================
+
+  test:
+    name: Test Application
+    runs-on: ubuntu-latest
+
+    steps:
+
+      - name: Checkout Source Code
+        uses: actions/checkout@v6
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v7
+        with:
+          node-version: '24'
+          cache: npm
+          cache-dependency-path: src/package-lock.json
+
+      - name: Install Dependencies
+        working-directory: src
+        run: npm ci
+
+      - name: Run Lint
+        working-directory: src
+        run: npm run lint
+
+      - name: Start Application
+        working-directory: src
+        run: npm start &
+
+      - name: Wait for Application
+        run: |
+          for i in {1..10}; do
+            if curl -f http://localhost:3000; then
+              echo "Application is ready"
+              exit 0
+            fi
+
+            echo "Waiting for application..."
+            sleep 2
+          done
+
+          echo "Application failed to start"
+          exit 1
+
+      - name: Run Integration Tests
+        working-directory: src
+        run: npm test
+
+
+ 
