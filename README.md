@@ -1,6 +1,6 @@
 # Node.js CI/CD Pipeline with GitHub Actions
 
-A hands-on DevOps project that implements a complete **CI/CD pipeline for a Node.js web application** using **GitHub Actions, Docker, and Docker Hub**.
+A hands-on DevOps project that implements a complete **CI/CD pipeline for a Node.js web application** using **GitHub-Actions, Docker, and Docker Hub**.
 
 The pipeline is designed around three clear stages:
 
@@ -113,7 +113,7 @@ This ensures that a Docker image is never published unless validation and image 
 
 ### Successful GitHub Actions Run
 
-Add your successful workflow screenshot here:
+Attached successful workflow screenshot below:
 
 ```markdown
 ![Successful CI/CD Pipeline](docs/images/pipeline-success.png)
@@ -123,7 +123,7 @@ Add your successful workflow screenshot here:
 
 ### Docker Hub Image
 
-Add your Docker Hub screenshot here:
+Attached Docker Hub screenshot below:
 
 ```markdown
 ![Docker Hub Image](docs/images/dockerhub-image.png)
