@@ -1,4 +1,4 @@
-# Node.js DevSecOps CI/CD Pipeline with GitHub Actions
+# Node.js DevOps CI/CD Pipeline with GitHub Actions
 
 A hands-on DevOps/DevSecOps project that implements a multi-stage CI/CD pipeline for a **Node.js web application** using **GitHub Actions, Docker, Docker Hub, and Trivy**.
 
