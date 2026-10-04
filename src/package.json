@@ -22,8 +22,8 @@
     "lint-fix": "eslint . --fix && prettier --write **/*.mjs *.mjs"
   },
   "dependencies": {
-    "@azure/msal-node": "^2.15.0",
-    "applicationinsights": "2.9.6",
+    "@azure/msal-node": "^7.0.1",
+    "applicationinsights": "^3.16.0",
     "axios": "^1.7.7",
     "connect-redis": "^7.1.1",
     "cookie-parser": "^1.4.7",
@@ -39,8 +39,8 @@
   "devDependencies": {
     "eslint": "^9.12.0",
     "eslint-config-prettier": "^9.1.0",
-    "httpyac": "^6.15.1",
-    "nodemon": "^3.1.7",
+    "httpyac": "^6.16.7",
+    "nodemon": "^1.14.10",
     "prettier": "^3.3.3"
   }
 }
