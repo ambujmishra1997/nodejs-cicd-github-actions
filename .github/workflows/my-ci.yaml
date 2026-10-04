@@ -65,6 +65,42 @@ jobs:
         run: npm test
 
 
+
+# =====================================
+  # 2. SECURITY SCAN STAGE
+  # =====================================
+
+  security_scan:
+    name: Trivy Security Scan
+
+    needs: test
+
+    runs-on: ubuntu-latest
+
+    steps:
+
+      - name: Checkout Source Code
+        uses: actions/checkout@v6
+
+      - name: Run Trivy Filesystem Scan
+        uses: aquasecurity/trivy-action@v0.36.0
+        with:
+          scan-type: 'fs'
+          scan-ref: '.'
+          format: 'json'
+          output: 'trivy.result.json'
+          severity: 'HIGH,CRITICAL'
+          ignore-unfixed: true
+          exit-code: '1'
+
+      - name: Upload Trivy Scan Report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: trivy-security-report
+          path: trivy.result.json
+          retention-days: 7  
+
   # =========================
   # 2. BUILD STAGE
   # =========================
@@ -73,7 +109,9 @@ jobs:
     name: Build Docker Image
 
     # Build will only run if test passes
-    needs: test
+    needs:
+      - test
+      - security_scan
 
     runs-on: ubuntu-latest
 
