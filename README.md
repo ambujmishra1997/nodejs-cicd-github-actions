@@ -1,139 +1,136 @@
-# Node.js CI/CD Pipeline with GitHub Actions
+# Node.js DevSecOps CI/CD Pipeline with GitHub Actions
 
-A hands-on DevOps project that implements a complete **CI/CD pipeline for a Node.js web application** using **GitHub-Actions, Docker, and Docker Hub**.
+A hands-on DevOps/DevSecOps project that implements a multi-stage CI/CD pipeline for a **Node.js web application** using **GitHub Actions, Docker, Docker Hub, and Trivy**.
 
-The pipeline is designed around three clear stages:
+<p align="center">
+  <img src="docs/images/ci-cd-pipeline-architecture.png"
+       alt="Stage-wise CI/CD Pipeline Architecture - GitHub Actions, Node.js, Trivy, Docker and Docker Hub"
+       width="100%">
+</p>
+
+---
+
+The application source is based on the open-source project **benc-uk/nodejs-demoapp**. My work in this repository focuses on the DevOps automation around the application: CI/CD workflow design, testing, security scanning, Docker packaging, artifact transfer, registry publishing, secrets, and documentation.
+
+---
+
+## Project Overview
+
+The pipeline is designed around clear quality and security gates:
 
 ```text
-Test  →  Build  →  Publish
+Test
+  ↓
+Trivy Repository / Dependency Security Scan
+  ↓
+Build Docker Image
+  ↓
+Publish to Docker Hub
 ```
 
-Each stage depends on the successful completion of the previous stage, ensuring that only tested and successfully built code is published as a Docker image.
+A later stage runs only when the previous required stage succeeds. A failed test or failed security gate prevents the Docker image from being published.
+
+For this Node.js application there is no Maven-style `.jar` or `.war` artifact. The **Docker image is the deployable artifact**.
 
 ---
 
-## Overview
+## What This Project Demonstrates
 
-This project demonstrates how to:
-
-- Validate a Node.js application using linting and integration tests
-- Build a Docker image only after tests pass
-- Transfer the built image between isolated GitHub Actions jobs
-- Publish the same tested image to Docker Hub
-- Manage Docker Hub credentials securely using GitHub Secrets
-- Use Git commit SHA tags for image traceability
-
-For this Node.js application, there is no Maven-style `.jar` or `.war` artifact.  
-The **Docker image itself is treated as the deployable artifact**.
+- Node.js dependency installation with `npm ci`
+- Linting and integration testing
+- Application readiness checking before HTTP tests
+- Multi-job GitHub Actions workflows
+- Job dependencies using `needs`
+- Trivy repository/dependency vulnerability scanning
+- Security gating before Docker image creation
+- Docker image creation with a custom Dockerfile
+- Docker image transfer between isolated GitHub Actions runners
+- Docker Hub authentication using GitHub Secrets
+- Docker image tagging and publishing
+- Dependency vulnerability remediation and re-validation
+- Git-based traceability between source code and container images
 
 ---
 
-## CI/CD Architecture
+# CI/CD Architecture
 
 ```text
 Developer
-   |
-   | git push
-   v
+   │
+   │ git push / pull request
+   ▼
 GitHub Repository
-   |
-   v
+   │
+   ▼
 GitHub Actions
-   |
-   +-----------------------+
-   |                       |
-   v                       |
-TEST                       |
-- Checkout code            |
-- Setup Node.js            |
-- npm ci                   |
-- Lint                     |
-- Start application        |
-- Readiness check          |
-- Integration tests        |
-   |                       |
-   | PASS                  |
-   v                       |
-BUILD                      |
-- Checkout code            |
-- docker build             |
-- docker save              |
-- Upload image artifact    |
-   |                       |
-   | PASS                  |
-   v                       | 
-PUBLISH                    |
-- Download artifact        |
-- docker load              |
-- Docker Hub login         |
-- Tag image                |
-- Push image               |
-   |                       |
-   v                       |
-Docker Hub <---------------+
+   │
+   ├────────────── TEST ──────────────┐
+   │  Checkout source                 │
+   │  Setup Node.js                   │
+   │  npm ci                          │
+   │  npm run lint                    │
+   │  Start application               │
+   │  Wait for localhost:3000         │
+   │  npm test                        │
+   └───────────────┬──────────────────┘
+                   │ PASS
+                   ▼
+          SECURITY / TRIVY FS SCAN
+                   │
+                   │ Scan repository and
+                   │ npm dependency metadata
+                   │
+                   │ HIGH / CRITICAL gate
+                   ▼
+                BUILD
+                   │
+                   │ docker build
+                   │ docker save
+                   │ upload image artifact
+                   ▼
+                PUBLISH
+                   │
+                   │ download artifact
+                   │ docker load
+                   │ Docker Hub login
+                   │ tag + push
+                   ▼
+              Docker Hub
 ```
 
 ---
 
-## Pipeline Dependency Flow
+# Pipeline Dependency Flow
 
-The jobs are connected using GitHub Actions `needs`.
+The workflow uses GitHub Actions job dependencies so later stages cannot continue when an earlier quality or security gate fails.
 
 ```text
 Test ✅
+   ↓
+Security Scan ✅
    ↓
 Build ✅
    ↓
 Publish ✅
 ```
 
-Failure behavior:
+Example failure behavior:
 
 ```text
-Test ❌
+Test ✅
+   ↓
+Security Scan ❌
    ↓
 Build skipped
    ↓
 Publish skipped
 ```
 
-```text
-Test ✅
-   ↓
-Build ❌
-   ↓
-Publish skipped
-```
-
-This ensures that a Docker image is never published unless validation and image creation both succeed.
+This is the key DevSecOps improvement in the project: **security is part of the delivery workflow instead of being treated as a separate manual activity**.
 
 ---
 
-## Pipeline Evidence
-
-### Successful GitHub Actions Run
-
-Attached successful workflow screenshot below:
-
-```markdown
-![Successful CI/CD Pipeline](docs/images/pipeline-success.png)
-```
-
-![Successful CI/CD Pipeline](docs/images/pipeline-success.png)
-
-### Docker Hub Image
-
-Attached Docker Hub screenshot below:
-
-```markdown
-![Docker Hub Image](docs/images/dockerhub-image.png)
-```
-
-![Docker Hub Image](docs/images/dockerhub-image.png)
-
----
-
-## Repository Structure
+# Repository Structure
 
 ```text
 .
@@ -144,6 +141,7 @@ Attached Docker Hub screenshot below:
 ├── docs/
 │   └── images/
 │       ├── pipeline-success.png
+│       ├── trivy-security-scan.png
 │       └── dockerhub-image.png
 │
 ├── src/
@@ -166,18 +164,20 @@ Attached Docker Hub screenshot below:
 └── README.md
 ```
 
+> The `docs/images` filenames are suggested evidence paths. Add only screenshots that actually exist in the repository.
+
 ---
 
-## Tech Stack
+# Tech Stack
 
 - **Node.js**
 - **npm**
-- **GitHub**
+- **Git / GitHub**
 - **GitHub Actions**
 - **Docker**
 - **Docker Hub**
+- **Trivy**
 - **Linux GitHub-hosted runners**
-- **Git**
 - **YAML**
 
 ---
@@ -186,9 +186,7 @@ Attached Docker Hub screenshot below:
 
 ## 1. Test Job
 
-The Test job validates the application before any image is built.
-
-### Steps
+The Test job validates the application before security scanning or Docker packaging.
 
 ```text
 Checkout Source Code
@@ -206,39 +204,106 @@ Readiness Check
 npm test
 ```
 
-### Why `npm ci`?
+`npm ci` installs dependencies using the exact versions recorded in `package-lock.json`, making CI runs clean and reproducible.
 
-`npm ci` is used instead of `npm install` because it installs dependencies using the exact versions recorded in `package-lock.json`.
-
-This makes CI runs more predictable and reproducible.
-
-### Why start the application before testing?
-
-The application uses integration tests that send HTTP requests to the running Node.js server.
-
-So the workflow must:
+The application must be running before the HTTP integration tests execute:
 
 ```text
-Start Application
-       ↓
+npm start
+   ↓
 Wait until port 3000 responds
-       ↓
-Run Integration Tests
+   ↓
+npm test
 ```
 
 This avoids false failures caused by tests starting before the application is ready.
 
 ---
 
-## 2. Build Job
+## 2. Security Scan Job
 
-The Build job runs only after the Test job succeeds.
+The security stage runs after the Test job succeeds.
 
-```yaml
-needs: test
+```text
+Test
+  ↓
+Trivy Filesystem / Repository Scan
+  ↓
+Security Gate
 ```
 
-### Build flow
+Trivy inspects repository dependency metadata such as:
+
+```text
+src/package-lock.json
+```
+
+The purpose of this stage is to detect known vulnerabilities in application dependencies **before the Docker image is built and published**.
+
+### Important distinction
+
+The Trivy repository scan is executed **by the CI/CD pipeline**, but findings in `package-lock.json` are vulnerabilities in the application's npm dependency tree. That is different from saying that the GitHub Actions YAML itself is vulnerable.
+
+---
+
+## Dependency Vulnerability Remediation
+
+The project also demonstrates the remediation loop that follows a failed security scan:
+
+```text
+Trivy detects vulnerability
+          ↓
+Identify affected package
+          ↓
+Identify direct / transitive parent
+          ↓
+Upgrade dependency
+          ↓
+Update package-lock.json
+          ↓
+Run application tests
+          ↓
+Run security scan again
+```
+
+Useful local checks:
+
+```bash
+npm audit
+npm audit --omit=dev
+npm outdated
+npm ls <package-name>
+```
+
+Production dependencies can be checked separately with:
+
+```bash
+npm audit --omit=dev
+```
+
+### Why not blindly use `npm audit fix --force`?
+
+`--force` can introduce major-version changes. A security fix therefore needs regression testing:
+
+```text
+Dependency change
+      ↓
+Lint
+      ↓
+Application startup
+      ↓
+Integration tests
+      ↓
+Security rescan
+```
+
+A vulnerability is not fully remediated for delivery purposes until the application still works and the security gate passes.
+
+---
+
+## 3. Build Job
+
+The Docker image is built only after the required validation and security jobs succeed.
 
 ```text
 Checkout Source Code
@@ -254,95 +319,66 @@ nodejs-demoapp.tar
 Upload GitHub Artifact
 ```
 
-The Docker image is tagged using the Git commit SHA:
+A commit-based image tag can be used for traceability:
 
 ```text
 nodejs-demoapp:<commit-sha>
 ```
 
-This provides traceability between the source commit and the built image.
-
 ---
 
-## 3. Publish Job
+## 4. Publish Job
 
-The Publish job depends on both Test and Build.
-
-```yaml
-needs:
-  - test
-  - build
-```
-
-### Publish flow
+The Publish job receives the Docker image produced by the Build job.
 
 ```text
-Download Docker Artifact
-        ↓
+Download Artifact
+       ↓
 docker load
-        ↓
-Login to Docker Hub
-        ↓
+       ↓
+Docker Hub Login
+       ↓
 Tag Image
-        ↓
-Push Image
+       ↓
+docker push
 ```
 
-The image is published to:
-
-```text
-ambujmishra1997/nodejs-demoapp:latest
-```
-
-It is also published with the Git commit SHA as a version tag.
-
-Example:
-
-```text
-ambujmishra1997/nodejs-demoapp:<commit-sha>
-```
+The image is not rebuilt in the Publish job. The same image produced during Build is the image that is sent to the registry.
 
 ---
 
-# Why the Docker Image Is the Artifact
+# Why the Docker Image Is Passed as an Artifact
 
-My earlier hands-on experience was mainly with Java and Maven.
-
-A typical Java build looks like:
+GitHub Actions jobs run on isolated, temporary runners.
 
 ```text
-pom.xml
-   ↓
-mvn test
-   ↓
-mvn clean install
-   ↓
-target/*.war
+Test Job       → Runner 1
+Security Job   → Runner 2
+Build Job      → Runner 3
+Publish Job    → Runner 4
 ```
 
-For this Node.js application, there is no equivalent `.war` or `.jar` output.
-
-The application runs directly from JavaScript source:
+A Docker image created on one runner does not automatically exist on another runner, so it must be transferred explicitly:
 
 ```text
-package.json
-     ↓
-npm ci
-     ↓
-Lint + Tests
-     ↓
 docker build
      ↓
-Docker Image
+docker save
+     ↓
+nodejs-demoapp.tar
+     ↓
+Upload Artifact
+     ↓
+Download Artifact
+     ↓
+docker load
+     ↓
+docker push
 ```
-
-So in this project, the **Docker image is the deployable build artifact**.
 
 ---
 
 # Dockerfile
-
-The project uses the following Dockerfile:
 
 ```dockerfile
 FROM node:24-alpine
@@ -364,37 +400,29 @@ USER node
 CMD ["npm", "start"]
 ```
 
-### Dockerfile Design
+Important choices:
 
-- Uses a lightweight Alpine-based Node.js image
-- Copies dependency files before source code for better Docker layer reuse
-- Installs only production dependencies
-- Runs the application using a non-root user
-- Exposes application port `3000`
+- `node:24-alpine` keeps the runtime image relatively small
+- package files are copied first to improve layer reuse
+- `npm ci --omit=dev` installs production dependencies only
+- `USER node` avoids running the application as root
+- port `3000` is documented with `EXPOSE`
 
 ---
 
-# Docker Hub
+# Local Development and Validation
 
-## Image
-
-```text
-ambujmishra1997/nodejs-demoapp:latest
-```
-
-## Pull the image
+From the application directory:
 
 ```bash
-docker pull ambujmishra1997/nodejs-demoapp:latest
+cd src
+npm ci
 ```
 
-## Run the container
+Start the application:
 
 ```bash
-docker run -d \
-  -p 3000:3000 \
-  --name nodejs-demoapp \
-  ambujmishra1997/nodejs-demoapp:latest
+npm start
 ```
 
 Open:
@@ -403,284 +431,116 @@ Open:
 http://localhost:3000
 ```
 
+Run tests from another terminal while the application is running:
+
+```bash
+npm test
+```
+
+Run linting:
+
+```bash
+npm run lint
+```
+
+Check production dependency vulnerabilities:
+
+```bash
+npm audit --omit=dev
+```
+
+---
+
+# Docker Usage
+
+Build locally from the repository root:
+
+```bash
+docker build -t nodejs-demoapp:local .
+```
+
+Run locally:
+
+```bash
+docker run -d \
+  -p 3000:3000 \
+  --name nodejs-demoapp \
+  nodejs-demoapp:local
+```
+
+---
+
+# Docker Hub
+
+Docker Hub image:
+
+```text
+ambujmishra1997/nodejs-demoapp
+```
+
+Pull:
+
+```bash
+docker pull ambujmishra1997/nodejs-demoapp:latest
+```
+
+Run:
+
+```bash
+docker run -d \
+  -p 3000:3000 \
+  --name nodejs-demoapp \
+  ambujmishra1997/nodejs-demoapp:latest
+```
+
 ---
 
 # GitHub Secrets
 
-Docker Hub credentials are not stored directly in the workflow.
-
-The following repository secrets are configured:
+Docker Hub credentials are stored as GitHub repository secrets instead of being hard-coded in the workflow.
 
 ```text
 DOCKERHUB_USERNAME
 DOCKERHUB_TOKEN
 ```
 
-They are accessed securely in GitHub Actions using:
-
-```yaml
-${{ secrets.DOCKERHUB_USERNAME }}
-${{ secrets.DOCKERHUB_TOKEN }}
-```
-
-This keeps credentials out of the repository and workflow source.
+Never commit Docker Hub passwords or access tokens to the repository.
 
 ---
 
-# Why the Docker Image Is Saved as a GitHub Artifact
-
-Each GitHub Actions job runs on a separate temporary runner.
+# Security Principles Practiced
 
 ```text
-Test Job     → Runner 1
-Build Job    → Runner 2
-Publish Job  → Runner 3
+Shift security left
+        ↓
+Scan before packaging
+        ↓
+Fail on unacceptable vulnerabilities
+        ↓
+Remediate dependencies
+        ↓
+Regression test changes
+        ↓
+Rescan before delivery
 ```
 
-The Docker image built in the Build job does not automatically exist in the Publish job.
-
-To transfer the same image between jobs:
-
-```text
-docker build
-     ↓
-Docker Image
-     ↓
-docker save
-     ↓
-nodejs-demoapp.tar
-     ↓
-Upload Artifact
-     ↓
-Download Artifact
-     ↓
-docker load
-     ↓
-docker push
-```
-
-This also prevents the image from being rebuilt during the Publish stage.
-
-The exact image produced by Build is the image that gets published.
+The current repository scan focuses on application dependency metadata. A container-image scan is a planned extension so the exact deployable artifact can also be checked before publishing.
 
 ---
 
 # What I Learned
 
-This project helped me understand CI/CD as a complete workflow rather than as a collection of individual commands.
-
-## 1. Mapping Java/Maven Concepts to Node.js
-
-My previous build experience was mostly with Java and Maven.
-
-I was familiar with:
-
-```text
-pom.xml
-   ↓
-mvn test
-   ↓
-mvn clean install
-   ↓
-target/*.war
-```
-
-In this project I learned that a plain Node.js application does not necessarily generate a `.jar` or `.war`.
-
-Instead:
-
-```text
-package.json
-     ↓
-npm ci
-     ↓
-Lint + Tests
-     ↓
-Docker Build
-     ↓
-Docker Image
-```
-
-This helped me understand that the artifact strategy depends on the application stack.
-
----
-
-## 2. `package.json` vs `pom.xml`
-
-I learned that `package.json` is the main project definition file for a Node.js application.
-
-It contains:
-
-- Dependencies
-- Development dependencies
-- Application metadata
-- npm scripts
-
-I also learned that `package-lock.json` locks exact dependency versions.
-
-For CI, `npm ci` is useful because it performs a clean and reproducible dependency installation.
-
----
-
-## 3. Building Multi-Job Pipelines
-
-I learned how to split a workflow into clear jobs:
-
-```text
-Test
- ↓
-Build
- ↓
-Publish
-```
-
-Instead of putting everything in one long job, each job has a clear responsibility.
-
-This makes the pipeline easier to understand, troubleshoot, and extend.
-
----
-
-## 4. Job Dependencies with `needs`
-
-I learned how GitHub Actions controls execution order using `needs`.
-
-```yaml
-build:
-  needs: test
-```
-
-and:
-
-```yaml
-publish:
-  needs:
-    - test
-    - build
-```
-
-This ensures later stages are blocked automatically if earlier stages fail.
-
----
-
-## 5. Integration Testing
-
-I learned the difference between normal build-time tests and tests that require a running application.
-
-The application must be started first:
-
-```text
-npm start
-   ↓
-Readiness Check
-   ↓
-npm test
-```
-
-This taught me an important DevOps principle:
-
-> A process being started does not always mean the application is ready to serve traffic.
-
-This concept is also important later in Kubernetes readiness and liveness probes.
-
----
-
-## 6. GitHub Actions Runners Are Ephemeral
-
-I learned that GitHub Actions jobs do not necessarily run on the same machine.
-
-Each job can receive a fresh runner, and that runner is destroyed after the job completes.
-
-Because of this, files and Docker images must be explicitly transferred between jobs when needed.
-
----
-
-## 7. Passing Artifacts Between Jobs
-
-I learned how to move a Docker image from Build to Publish without rebuilding it:
-
-```text
-docker save
-   ↓
-Upload Artifact
-   ↓
-Download Artifact
-   ↓
-docker load
-```
-
-This was one of the most important practical lessons from the project.
-
----
-
-## 8. Docker as a Deployable Artifact
-
-I learned how to package an application, its runtime, and its production dependencies into a single Docker image.
-
-The Docker image becomes the portable unit that can later be deployed to:
-
-- Docker hosts
-- Kubernetes
-- Cloud platforms
-- Container services
-
----
-
-## 9. Image Tagging and Traceability
-
-I learned why relying only on `latest` is not enough.
-
-Using the Git commit SHA as an image tag creates traceability:
-
-```text
-Git Commit
-    ↓
-GitHub Actions Run
-    ↓
-Docker Image
-```
-
-This makes it easier to identify exactly which version of the application is running.
-
----
-
-## 10. Secure Credential Management
-
-I learned not to hard-code Docker Hub credentials in workflow files.
-
-Instead, GitHub Secrets are used for:
-
-```text
-DOCKERHUB_USERNAME
-DOCKERHUB_TOKEN
-```
-
-This introduced me to secure credential handling in CI/CD systems.
-
----
-
-## 11. Failure Control and Quality Gates
-
-I learned how pipeline stages act as quality gates.
-
-```text
-Test ❌
-   ↓
-Build skipped
-   ↓
-Publish skipped
-```
-
-and:
-
-```text
-Test ✅
-   ↓
-Build ✅
-   ↓
-Publish ✅
-```
-
-Only validated code reaches the registry.
+- Designing multi-job CI/CD pipelines with clear responsibilities
+- Using GitHub Actions `needs` as quality and security gates
+- Understanding ephemeral GitHub-hosted runners
+- Passing Docker images between jobs using artifacts
+- Running readiness checks before integration tests
+- Distinguishing direct and transitive npm dependencies
+- Integrating vulnerability scanning into CI/CD
+- Remediating dependency vulnerabilities without treating forced upgrades as automatically safe
+- Using Docker as the deployable artifact for a Node.js application
+- Protecting registry credentials with GitHub Secrets
+- Using commit-based image tags for traceability
 
 ---
 
@@ -689,56 +549,92 @@ Only validated code reaches the registry.
 - Git and GitHub
 - GitHub Actions
 - CI/CD pipeline design
-- YAML
-- Node.js
-- npm
+- DevSecOps concepts
+- Node.js and npm
+- `package.json` / `package-lock.json`
 - Dependency management
-- Linting
-- Integration testing
+- Vulnerability remediation
+- Trivy
+- Linting and integration testing
 - Application readiness checks
 - Dockerfile creation
-- Docker image building
-- Docker image tagging
+- Docker image building and tagging
 - Docker Hub
 - GitHub Secrets
-- Token-based authentication
 - GitHub Actions artifacts
 - Job dependencies
-- Commit SHA versioning
+- Commit SHA traceability
 - Pipeline troubleshooting
 
 ---
 
-# Future Improvements
+# Planned Improvements
 
-The next improvements planned for this project are:
+- Add a **Trivy Docker image scan** after Build and before Publish
+- Retain security scan reports as CI artifacts
+- Add SAST using CodeQL, SonarQube, or SonarCloud
+- Add secret scanning
+- Generate an SBOM for the container image
+- Add container image signing / provenance
+- Improve Docker build caching
+- Add Kubernetes Deployment and Service manifests
+- Add Kubernetes readiness and liveness probes
+- Automate deployment after image publishing
+- Add Prometheus and Grafana monitoring
+- Add Terraform-based infrastructure
+- Add Dev / Staging / Production environments
+- Add a rollback strategy
 
-- Trivy container vulnerability scanning
-- SonarQube / SonarCloud code-quality analysis
-- Docker build caching
-- Kubernetes Deployment and Service
-- Kubernetes readiness and liveness probes
-- Automated deployment after image publishing
-- Prometheus and Grafana monitoring
-- Terraform-based infrastructure
-- AWS deployment with cost optimization
-- Rollback strategy
-- Environment-based deployments such as Dev / Staging / Production
+Target security flow:
+
+```text
+Test
+ ↓
+Trivy Repository Scan
+ ↓
+Build Docker Image
+ ↓
+Trivy Image Scan
+ ↓
+Publish
+```
 
 ---
 
-# Application Source
+# Pipeline Evidence
+
+Recommended screenshot references:
+
+```markdown
+![Successful Pipeline](docs/images/pipeline-success.png)
+
+![Trivy Security Scan](docs/images/trivy-security-scan.png)
+
+![Docker Hub Image](docs/images/dockerhub-image.png)
+```
+
+Only add screenshots that do not expose access tokens, passwords, or other secrets.
+
+---
+
+# Application Source and Attribution
 
 The Node.js application used as the workload for this DevOps project is based on the open-source project:
 
 **benc-uk/nodejs-demoapp**
 
-The CI/CD workflow, Dockerfile, Test → Build → Publish pipeline design, artifact transfer, Docker Hub publishing, secret configuration, and project documentation were created as part of hands-on DevOps practice.
+Original application source:
+
+```text
+https://github.com/benc-uk/nodejs-demoapp
+```
+
+This repository is used for hands-on DevOps/DevSecOps practice. The work performed in this project includes the GitHub Actions CI/CD workflow, Trivy security integration, Docker packaging, job dependencies, artifact handoff, Docker Hub publishing, secrets configuration, troubleshooting, and documentation.
 
 ---
 
-## Author
+# Author
 
 **Ambuj Mishra**
 
-GitHub: [ambujmishra1997](https://github.com/ambujmishra1997)
+GitHub: **ambujmishra1997**

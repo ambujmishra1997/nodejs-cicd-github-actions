@@ -4,10 +4,12 @@ on:
   push:
     branches:
       - main
+      - feature
 
   pull_request:
     branches:
       - main
+      - feature
 
   workflow_dispatch:    
 
@@ -66,7 +68,7 @@ jobs:
 
 
 
-# =====================================
+  #=====================================
   # 2. SECURITY SCAN STAGE
   # =====================================
 
@@ -150,6 +152,7 @@ jobs:
     # Publish requires BOTH test and build
     needs:
       - test
+      - security_scan
       - build
 
     runs-on: ubuntu-latest
